@@ -1,0 +1,1011 @@
+Product Requirements Document
+StudyMate AI
+
+Version: 1.0
+Status: Ready for Development
+Product Type: AI-powered educational web application
+Primary Architecture: RAG + LLM
+Target Users: Students from Classes 9–12
+Primary Goal: Enable students to learn from their own study material through grounded AI Q&A and chapter-specific quizzes.
+
+1. Product Overview
+1.1 Product Name
+
+StudyMate AI
+
+Tagline
+
+Learn from your material. Ask anything. Test yourself.
+
+1.2 Product Vision
+
+StudyMate AI is a class-aware, RAG-based AI learning platform that allows students to upload educational PDFs and interact with their study material through an AI tutor.
+
+Unlike a generic AI chatbot, StudyMate AI should:
+
+understand the student's class and subject,
+process uploaded educational material,
+identify chapters,
+allow students to select specific chapters,
+answer questions using only the selected study material,
+provide source/page references,
+generate quizzes exclusively from selected chapters,
+evaluate quiz performance.
+
+The product should feel like a digital study desk / intelligent textbook, not like a generic AI chatbot.
+
+2. Problem Statement
+
+Students often use general-purpose AI assistants to study, but those systems can:
+
+provide information outside the student's syllabus,
+use terminology inappropriate for the student's class level,
+produce answers unrelated to their textbook,
+make it difficult to identify where an answer came from,
+generate quizzes from an entire subject instead of the chapter being studied.
+
+StudyMate AI addresses this by grounding the AI in the student's uploaded educational material.
+
+3. Target Users
+Primary users
+
+Students studying:
+
+Class 9
+Class 10
+Class 11
+Class 12
+Secondary users
+
+Potential future users:
+
+Teachers
+Tutors
+Coaching institutes
+
+V1 is student-focused.
+
+4. Core Product Principle
+
+The most important principle of StudyMate AI is:
+
+The selected study scope controls what the AI can use.
+
+For example:
+
+Class: 10
+Subject: Artificial Intelligence
+Material: AI_Textbook.pdf
+
+Selected chapters:
+✓ Chapter 2
+✓ Chapter 3
+✗ Chapter 4
+
+If the student asks a question, retrieval must prioritize/filter content belonging to Chapters 2 and 3.
+
+If the student generates a quiz, questions must be generated exclusively from Chapters 2 and 3.
+
+The application must never silently expand the scope to the entire textbook.
+
+5. V1 Features
+Feature 1 — Student Class Selection
+
+Supported classes:
+Class 8
+Class 9
+Class 10
+Class 11
+Class 12
+
+The class is associated with uploaded material and used as contextual information for AI responses.
+
+Example:
+
+{
+  "class": "10",
+  "subject": "Artificial Intelligence"
+}
+6. Feature 2 — PDF Upload
+
+Students can upload educational PDFs.
+
+Supported:
+
+PDF
+
+Initial V1 limitations:
+
+Maximum file size: 25 MB
+One document per upload
+Text-based PDFs are the primary supported format
+
+Scanned/image-only PDFs should display an appropriate message rather than silently failing.
+
+Upload flow
+Add Material
+     ↓
+Select Class
+     ↓
+Select Subject
+     ↓
+Upload PDF
+     ↓
+Process Material
+     ↓
+Extract Text
+     ↓
+Detect Chapters
+     ↓
+Create Chunks
+     ↓
+Generate Embeddings
+     ↓
+Store in Vector DB
+7. Feature 3 — Document Processing
+
+After upload, the backend should:
+
+Step 1
+
+Extract text page-by-page.
+
+Step 2
+
+Identify chapter boundaries.
+
+The system should first attempt structural detection using:
+
+chapter numbering,
+headings,
+table of contents,
+page structure.
+
+LLM-assisted detection may be used as a fallback for poorly structured PDFs.
+
+Step 3
+
+Split chapter content into semantic chunks.
+
+Step 4
+
+Generate embeddings.
+
+Step 5
+
+Store embeddings in ChromaDB.
+
+8. Metadata Model
+
+Every chunk stored in the vector database must contain metadata.
+
+Example:
+
+{
+  "document_id": "doc_001",
+  "document_name": "AI_Textbook.pdf",
+  "class": "10",
+  "subject": "Artificial Intelligence",
+  "chapter_number": 3,
+  "chapter_title": "Machine Intelligence",
+  "page": 42
+}
+
+This metadata is essential for scoped retrieval.
+
+9. Feature 4 — Document Library
+
+The Materials page displays uploaded documents.
+
+Each document should show:
+
+document name,
+class,
+subject,
+number of chapters,
+number of pages,
+upload date,
+processing status.
+
+Example:
+
+AI_Textbook.pdf
+Artificial Intelligence · Class 10
+
+8 chapters · 126 pages
+
+Processed ✓
+
+Open →
+10. Feature 5 — Chapter Detection
+
+After processing a PDF, StudyMate should identify chapters.
+
+Example:
+
+AI_Textbook.pdf
+
+01  Introduction to AI
+02  AI Project Cycle
+03  Machine Intelligence
+04  Cybersecurity
+05  Data and Information
+
+Chapter information should be persisted.
+
+11. Feature 6 — Study Scope
+
+The user must be able to choose what material the AI should use.
+
+Supported scopes:
+
+Entire material
+○ Entire material
+Selected chapters
+● Selected chapters
+
+☑ Chapter 2
+☑ Chapter 3
+☐ Chapter 4
+
+The selected scope should be visible throughout the AI Tutor and Quiz experience.
+
+12. Feature 7 — AI Tutor
+
+The AI Tutor is the primary feature.
+
+Student enters a question:
+
+What is machine intelligence?
+
+The system:
+
+Question
+ ↓
+Query embedding
+ ↓
+Metadata filtering
+ ↓
+Similarity search
+ ↓
+Relevant chunks
+ ↓
+LLM
+ ↓
+Grounded response
+
+The LLM receives:
+
+Student class
+Subject
+Selected chapters
+User question
+Retrieved context
+13. Grounded Answer Requirements
+
+The AI must:
+
+prioritize retrieved material,
+avoid inventing textbook-specific information,
+answer at the student's selected class level,
+clearly indicate when information isn't available in the selected material,
+avoid pretending that external knowledge came from the textbook.
+
+If the answer cannot be supported by the selected material:
+
+"I couldn't find enough information about this in the selected chapters."
+
+The system should not hallucinate an answer simply to satisfy the query.
+
+14. Source References
+
+Each answer should provide source information.
+
+Example:
+
+Sources
+
+AI_Textbook.pdf
+Chapter 3 — Machine Intelligence
+Page 42
+
+Chapter 3 — Machine Intelligence
+Page 43
+
+Sources should be clickable where practical.
+
+The UI should make it obvious that the answer was grounded in retrieved material.
+
+15. Feature 8 — Chapter-Specific Quiz Generation
+
+Students can generate a quiz from:
+
+one chapter,
+multiple chapters.
+
+Example:
+
+✓ Chapter 2 — AI Project Cycle
+✓ Chapter 3 — Machine Intelligence
+✗ Chapter 4 — Cybersecurity
+
+The quiz generator must receive the selected chapter scope.
+
+16. Quiz Configuration
+
+The user can configure:
+
+Number of questions
+5
+10
+15
+20
+Difficulty
+Easy
+Medium
+Hard
+Question types
+
+V1:
+
+Multiple Choice
+True / False
+
+Future:
+
+Multiple Answer
+Short Answer
+17. Quiz Generation Pipeline
+Selected chapters
+        ↓
+Retrieve relevant chapter content
+        ↓
+Prepare quiz context
+        ↓
+Gemini LLM
+        ↓
+Structured JSON
+        ↓
+Validate response
+        ↓
+Render quiz
+
+The model should be instructed to generate questions only from the retrieved material.
+
+18. Quiz Experience
+
+Quiz screen should show:
+
+Machine Intelligence
+
+Question 4 of 10
+
+Which of the following best describes
+machine intelligence?
+
+○ Option A
+
+○ Option B
+
+○ Option C
+
+○ Option D
+
+                    Next →
+
+Progress should be visible.
+
+The selected chapter scope should remain visible.
+
+19. Quiz Results
+
+After completion:
+
+Quiz Complete
+
+8 / 10
+
+80%
+
+Correct       8
+Incorrect     2
+
+The student can:
+
+review mistakes,
+retry quiz,
+return to AI Tutor.
+20. Review Mistakes
+
+For each incorrect question:
+
+Question
+
+...
+
+Your answer:
+...
+
+Correct answer:
+...
+
+Explanation:
+...
+
+Source:
+Chapter 3 · Page 42
+
+The explanation should ideally be grounded in the same source material.
+
+21. AI Tutor — Additional Actions
+
+After receiving an answer, provide lightweight actions:
+
+Explain simply
+Explain in detail
+Give an example
+Exam answer
+
+These actions should reuse the retrieved context rather than restarting the entire RAG pipeline unnecessarily.
+
+22. UI/UX Direction
+Design philosophy
+
+Academic × editorial × modern software
+
+The application should feel like:
+
+A beautifully designed digital study desk.
+
+Not:
+
+A generic AI SaaS dashboard.
+
+23. Visual Style
+Background
+
+Warm off-white:
+
+#F7F6F2
+Surface
+#FFFFFF
+Primary text
+#20201E
+Secondary text
+#73736D
+Borders
+#E5E3DC
+Accent
+
+Deep restrained blue:
+
+#3157D5
+
+Use the accent sparingly.
+
+24. Typography
+Interface
+
+Use:
+
+Inter
+Geist Sans
+Editorial / chapter headings
+
+Use:
+
+Newsreader
+Source Serif 4
+
+The contrast between serif headings and sans-serif interface text should create the product's identity.
+
+25. Explicitly Avoid
+
+The UI must NOT use:
+
+neon gradients,
+purple/blue AI gradients,
+excessive glassmorphism,
+floating glowing blobs,
+excessive shadows,
+excessive rounded cards,
+huge hero sections,
+AI sparkle icons everywhere,
+robot emojis as branding,
+generic "AI-powered learning" marketing copy,
+excessive dashboard metrics,
+excessive animations.
+
+The interface should communicate through:
+
+Typography + spacing + hierarchy + information architecture.
+
+26. Navigation
+
+Sidebar:
+
+STUDYMATE
+
+LIBRARY
+  Materials
+  Recent
+
+STUDY
+  AI Tutor
+  Quizzes
+
+────────────
+
+Class 10
+Artificial Intelligence
+
+────────────
+
+Settings
+
+Keep the sidebar compact.
+
+27. Screen Architecture
+Screen 1 — Dashboard
+
+Purpose:
+
+Show:
+
+recently studied material,
+uploaded materials,
+recent quizzes,
+continue studying.
+Screen 2 — Materials
+
+Purpose:
+
+Display document library.
+
+Actions:
+
+open document,
+add material.
+Screen 3 — Add Material
+
+Contains:
+
+class selector,
+subject selector,
+PDF upload,
+processing state.
+Screen 4 — AI Tutor
+
+Three-column layout:
+
+Chapter navigation
+        │
+        ↓
+Conversation
+        │
+        ↓
+Sources
+
+Primary interaction:
+
+Ask questions about selected material.
+
+Screen 5 — Quiz Setup
+
+Contains:
+
+document selection,
+chapter selection,
+question count,
+difficulty,
+question type.
+
+Must clearly display:
+
+Quiz scope: Chapter 2 + Chapter 3
+
+Screen 6 — Quiz
+
+Contains:
+
+question,
+options,
+progress,
+navigation,
+chapter scope.
+Screen 7 — Quiz Results
+
+Contains:
+
+score,
+correct/incorrect count,
+topics/questions to revisit,
+review mistakes,
+retry.
+28. Component Architecture
+
+Create reusable components rather than building individual UI elements repeatedly.
+
+components/
+
+layout/
+├── Sidebar
+├── Topbar
+└── PageHeader
+
+documents/
+├── DocumentCard
+├── UploadZone
+└── ChapterList
+
+tutor/
+├── ChatMessage
+├── ChatInput
+├── SourceReference
+└── ChapterSelector
+
+quiz/
+├── QuizQuestion
+├── QuizProgress
+├── QuizOption
+└── QuizResult
+29. Technical Stack
+Frontend
+React
+Vite
+Tailwind CSS
+React Router
+Axios
+Lucide React
+Backend
+Python
+FastAPI
+Pydantic
+PyMuPDF
+AI
+Gemini API
+Vector Database
+ChromaDB
+30. Backend Architecture
+backend/
+│
+├── app/
+│   ├── main.py
+│   │
+│   ├── api/
+│   │   ├── documents.py
+│   │   ├── tutor.py
+│   │   └── quizzes.py
+│   │
+│   ├── services/
+│   │   ├── pdf_service.py
+│   │   ├── chapter_service.py
+│   │   ├── embedding_service.py
+│   │   ├── rag_service.py
+│   │   └── quiz_service.py
+│   │
+│   ├── models/
+│   │   ├── document.py
+│   │   ├── chat.py
+│   │   └── quiz.py
+│   │
+│   └── core/
+│       ├── config.py
+│       └── prompts.py
+│
+├── data/
+│   ├── uploads/
+│   └── chroma/
+│
+├── requirements.txt
+└── .env
+31. API Design
+Upload
+POST /api/documents/upload
+
+Multipart form:
+
+file
+class_name
+subject
+Documents
+GET /api/documents
+Document details
+GET /api/documents/{document_id}
+
+Returns chapters and processing status.
+
+Ask AI
+POST /api/tutor/ask
+
+Request:
+
+{
+  "document_id": "doc_001",
+  "chapters": [2, 3],
+  "question": "What is machine intelligence?"
+}
+
+Response:
+
+{
+  "answer": "...",
+  "sources": [
+    {
+      "document": "AI_Textbook.pdf",
+      "chapter": "Machine Intelligence",
+      "page": 42
+    }
+  ]
+}
+Generate Quiz
+POST /api/quiz/generate
+
+Request:
+
+{
+  "document_id": "doc_001",
+  "chapters": [2, 3],
+  "question_count": 10,
+  "difficulty": "medium",
+  "question_types": [
+    "multiple_choice",
+    "true_false"
+  ]
+}
+32. RAG Metadata
+
+Every vector must retain:
+
+{
+  "document_id": "doc_001",
+  "document_name": "AI_Textbook.pdf",
+  "class": "10",
+  "subject": "Artificial Intelligence",
+  "chapter_number": 3,
+  "chapter_title": "Machine Intelligence",
+  "page": 42
+}
+
+Retrieval must support metadata filtering.
+
+Example conceptual filter:
+
+document_id = doc_001
+AND chapter_number IN [2, 3]
+33. RAG Requirements
+
+The system must:
+
+Extract page-level text.
+Detect chapters.
+Preserve chapter boundaries.
+Chunk content.
+Generate embeddings.
+Store vectors with metadata.
+Filter by selected chapters.
+Perform similarity search.
+Send retrieved context to Gemini.
+Return answer + sources.
+34. Hallucination Control
+
+The system prompt should establish:
+
+Answer using the provided retrieved context.
+
+If sufficient information isn't present:
+
+"I couldn't find enough information about this in the selected material."
+
+The AI should not fabricate:
+
+page numbers,
+textbook statements,
+chapter content,
+citations.
+35. Quiz Reliability
+
+Quiz generation should return structured JSON.
+
+Example:
+
+{
+  "title": "Machine Intelligence",
+  "questions": [
+    {
+      "question": "...",
+      "type": "multiple_choice",
+      "options": [
+        "...",
+        "...",
+        "...",
+        "..."
+      ],
+      "correct_answer": 0,
+      "explanation": "...",
+      "source": {
+        "chapter": 3,
+        "page": 42
+      }
+    }
+  ]
+}
+
+The backend should validate the generated structure before sending it to the frontend.
+
+36. Environment Variables
+
+Only the backend may access API credentials.
+
+GEMINI_API_KEY=
+
+The Gemini key must never be exposed to React/browser code.
+
+37. Security Requirements
+
+V1 should:
+
+validate uploaded files,
+only accept PDFs,
+enforce file-size limits,
+sanitize filenames,
+keep API keys server-side,
+avoid exposing internal filesystem paths,
+validate LLM JSON before returning it.
+38. V1 Non-Goals
+
+Do not implement:
+
+authentication,
+payments,
+social features,
+leaderboards,
+teacher dashboards,
+mobile application,
+fine-tuning,
+custom ML model training,
+advanced analytics,
+cloud deployment infrastructure,
+complicated recommendation algorithms.
+
+These can be future features.
+
+39. Development Phases
+Phase 1 — RAG Engine
+
+Priority:
+
+PDF
+ ↓
+Text extraction
+ ↓
+Chapter detection
+ ↓
+Chunking
+ ↓
+Embeddings
+ ↓
+ChromaDB
+ ↓
+Query
+ ↓
+Retrieved context
+ ↓
+Gemini
+
+Milestone: Ask a question and receive a grounded answer with page information.
+
+Phase 2 — Backend API
+
+Implement:
+
+documents/upload
+documents
+documents/{id}
+tutor/ask
+quiz/generate
+Phase 3 — UI Foundation
+
+Build:
+
+layout,
+sidebar,
+typography,
+colors,
+reusable components.
+Phase 4 — Core Screens
+
+Build:
+
+Dashboard
+Materials
+Upload
+AI Tutor
+Phase 5 — Quiz System
+
+Build:
+
+Quiz setup
+Quiz
+Results
+Review mistakes
+Phase 6 — Integration & Polish
+
+Test:
+
+chapter filtering,
+RAG accuracy,
+source references,
+quiz scope,
+responsive layout,
+error states,
+loading states.
+40. Definition of Done
+
+The V1 is considered complete when a student can perform this entire flow:
+
+Open StudyMate
+      ↓
+Select Class 10
+      ↓
+Upload AI textbook
+      ↓
+System processes PDF
+      ↓
+Chapters detected
+      ↓
+Select Chapter 3
+      ↓
+Ask:
+"What is machine intelligence?"
+      ↓
+Receive grounded answer
+      ↓
+See Chapter 3 / Page reference
+      ↓
+Go to Quiz
+      ↓
+Select Chapter 3
+      ↓
+Generate 10 questions
+      ↓
+Complete quiz
+      ↓
+Receive score
+      ↓
+Review mistakes
+
+And critically:
+
+No question or answer should silently come from an unselected chapter.
+
+41. Antigravity Implementation Instruction
+
+Treat this PRD as the source of truth.
+
+Before implementing:
+
+Inspect the repository.
+Create a clean frontend/backend structure.
+Do not introduce unnecessary dependencies.
+Do not invent additional product features.
+Build reusable components.
+Keep business logic out of React components.
+Keep Gemini credentials exclusively on the backend.
+Keep RAG logic modular and independently testable.
+Implement the RAG backend before building complex frontend interactions.
+Use realistic loading, empty, error, and processing states.
+Follow the specified visual system exactly.
+Do not use generic AI SaaS UI patterns.
+Do not use gradients, glassmorphism, neon colors, excessive shadows, or excessive rounded cards.
+Prioritize typography, spacing, hierarchy, and usability.
+Preserve chapter metadata throughout the entire RAG pipeline.
+Use the same chapter-scoped retrieval system for both Q&A and quiz generation.
+Validate structured LLM responses before displaying them.
+Never expose API keys in client-side code.
+Keep V1 intentionally small and presentation-ready.
+Most important product rule
+
+StudyMate AI is not a generic chatbot. It is a study-material-grounded AI tutor.
+
+The student's selected class + subject + document + chapter scope should remain central to the application's behavior.
