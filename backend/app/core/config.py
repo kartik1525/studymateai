@@ -36,7 +36,17 @@ class Settings(BaseModel):
 
     # LLM Models
     GENERATION_MODEL: str = os.getenv("GENERATION_MODEL", "gemini-3.8-flash")
+    GEMINI_MODEL_POOL: str = os.getenv(
+        "GEMINI_MODEL_POOL", 
+        "gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3.5-flash-lite"
+    )
 
+    @property
+    def model_pool(self) -> list[str]:
+        if os.getenv("GEMINI_MODEL_POOL") is None and os.getenv("GENERATION_MODEL") is not None:
+            # If only GENERATION_MODEL is configured, fall back to it for backward compatibility
+            return [self.GENERATION_MODEL]
+        return [m.strip() for m in self.GEMINI_MODEL_POOL.split(",") if m.strip()]
     # Chunking configuration
     CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", "800"))
     CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", "150"))

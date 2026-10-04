@@ -206,17 +206,7 @@ class TestChapterDetectionRegex:
         assert chapters[0].chapter_title == "Foundations"
         assert chapters[1].chapter_title == "Applications"
 
-    def test_numbered_dot_headings(self):
-        pages = [
-            PageText(1, "1. Introduction to Computing\nComputers are everywhere."),
-            PageText(2, "More computing info."),
-            PageText(3, "2. Data Structures\nArrays and linked lists."),
-            PageText(4, "Trees and graphs."),
-        ]
-        chapters = ChapterService.detect_chapters(pages, toc=None)
-        assert len(chapters) == 2
-        assert chapters[0].chapter_title == "Introduction to Computing"
-        assert chapters[1].chapter_title == "Data Structures"
+
 
     def test_unit_headings(self):
         pages = [
@@ -242,6 +232,30 @@ class TestChapterDetectionRegex:
         assert len(chapters) == 2
         assert chapters[0].start_page == 3
         assert chapters[1].start_page == 10
+
+    def test_science_syllabus_structure_roman_numerals(self):
+        """Test the explicit detection of units with Roman numerals and skipping syllabus notes."""
+        pages = [
+            PageText(1, "CG 1 - Explores the world of matter\nC 1.1 - Describes classification\nCourse Structure\nNote for Teachers:"),
+            PageText(2, "Unit I: Chemical Substances - Nature and Behaviour\nChemical Reactions..."),
+            PageText(3, "Unit II: World of Living\nLife processes..."),
+            PageText(4, "Unit III: Natural Phenomena\nFunctioning of a lens..."),
+            PageText(5, "Unit IV: Effects of Current\nElectric current..."),
+            PageText(6, "Unit V: Natural Resources\nOur environment...\nPracticals\nQuestion Paper Design"),
+        ]
+        chapters = ChapterService.detect_chapters(pages, toc=None)
+        assert len(chapters) == 5
+        assert chapters[0].chapter_number == 1
+        assert chapters[0].chapter_title == "Chemical Substances - Nature and Behaviour"
+        assert chapters[1].chapter_number == 2
+        assert chapters[1].chapter_title == "World of Living"
+        assert chapters[2].chapter_number == 3
+        assert chapters[2].chapter_title == "Natural Phenomena"
+        assert chapters[3].chapter_number == 4
+        assert chapters[3].chapter_title == "Effects of Current"
+        assert chapters[4].chapter_number == 5
+        assert chapters[4].chapter_title == "Natural Resources"
+
 
 
 class TestChapterDetectionTOC:

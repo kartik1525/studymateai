@@ -65,10 +65,20 @@ async def ask_tutor(request: TutorAskRequest):
             question=question,
         )
         return response
-    except RuntimeError as e:
-        # e.g., Gemini API key missing, or empty generation
-        logger.error(f"Tutor API error: {e}")
-        raise HTTPException(status_code=502, detail="Failed to generate an answer from the AI service.")
     except Exception as e:
+        # Check if it's the specific LLMGenerationError
+        if type(e).__name__ == "LLMGenerationError":
+            error_msg = str(e)
+            logger.error(f"Tutor API error (LLM pool failed): {error_msg}")
+            raise HTTPException(status_code=502, detail=error_msg)
+        elif isinstance(e, RuntimeError):
+            # e.g., Gemini API key missing, empty generation, or quota exhausted
+            error_msg = str(e)
+            logger.error(f"Tutor API error: {error_msg}")
+            # Identify rate limits/quota easily
+            if "429" in error_msg or "quota" in error_msg.lower():
+                raise HTTPException(status_code=502, detail=f"AI service quota exceeded. Please try again later. Details: {error_msg}")
+            raise HTTPException(status_code=502, detail=f"Failed to generate an answer from the AI service: {error_msg}")
+        
         logger.exception("Unexpected error in Tutor API.")
         raise HTTPException(status_code=500, detail="An unexpected error occurred while processing your request.")

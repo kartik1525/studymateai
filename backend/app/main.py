@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.documents import router as documents_router
 from app.api.tutor import router as tutor_router
+from app.api.quiz import router as quiz_router
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -22,6 +23,7 @@ app.add_middleware(
 # Register API routers
 app.include_router(documents_router)
 app.include_router(tutor_router)
+app.include_router(quiz_router)
 
 @app.get("/api/health", tags=["Health"])
 async def health_check():

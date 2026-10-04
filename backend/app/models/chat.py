@@ -13,14 +13,6 @@ class TutorAskRequest(BaseModel):
     question: str = Field(..., min_length=1, description="The student's question.")
 
 
-class SourceReference(BaseModel):
-    """A specific source chunk used to answer the question."""
-    document: str = Field(..., description="Name of the document.")
-    chapter: str = Field(..., description="Title of the chapter.")
-    page: int = Field(..., description="Page number where the information was found.")
-
-
 class TutorAskResponse(BaseModel):
-    """Response payload containing the grounded answer and its sources."""
-    answer: str = Field(..., description="The grounded answer from the AI tutor.")
-    sources: list[SourceReference] = Field(..., description="List of sources used to generate the answer.")
+    """Response payload containing the grounded answer from the AI tutor."""
+    answer: str = Field(..., description="The conceptual explanation from the AI tutor.")

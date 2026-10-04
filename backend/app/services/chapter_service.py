@@ -35,29 +35,31 @@ class _RawChapterHit:
 # ────────────────────────────────────────────────────────────────────
 
 _CHAPTER_PATTERNS: list[re.Pattern] = [
-    # "Chapter 3: Machine Intelligence" / "Chapter 3 — Machine Intelligence"
+    # "Chapter 3: Machine Intelligence" / "Chapter III — Machine Intelligence"
     re.compile(
-        r"^\s*chapter\s+(\d+)\s*[:\-–—.]\s*(.+)",
+        r"^\s*chapter\s+((?:\d+|[IVX]+))\s*[:\-–—.]\s*(.+)",
         re.IGNORECASE,
     ),
     # "Chapter 3" alone on a line
     re.compile(
-        r"^\s*chapter\s+(\d+)\s*$",
+        r"^\s*chapter\s+((?:\d+|[IVX]+))\s*$",
         re.IGNORECASE,
     ),
     # "CHAPTER 3  MACHINE INTELLIGENCE" (all-caps, space separated)
     re.compile(
-        r"^\s*CHAPTER\s+(\d+)\s+([A-Z][A-Z\s]+)$",
+        r"^\s*CHAPTER\s+((?:\d+|[IVX]+))\s+([A-Z][A-Z\s]+)$",
     ),
-    # "Unit 3: ..." / "Unit 3 — ..."
+    # "Unit 3: ..." / "Unit III — ..." / "Unit IV: Effects of Current"
     re.compile(
-        r"^\s*unit\s+(\d+)\s*[:\-–—.]\s*(.+)",
+        r"^\s*unit\s+((?:\d+|[IVX]+))\s*[:\-–—.]\s*(.+)",
         re.IGNORECASE,
     ),
-    # "3. Machine Intelligence" (number-dot at start of line, title follows)
+    # "Unit 3" alone on a line
     re.compile(
-        r"^\s*(\d{1,2})\.\s+([A-Z][A-Za-z\s]{4,})",
+        r"^\s*unit\s+((?:\d+|[IVX]+))\s*$",
+        re.IGNORECASE,
     ),
+    # Removed weak pattern: r"^\s*(\d{1,2})\.\s+([A-Z][A-Za-z\s]{4,})" as it catches numbered lists
 ]
 
 # Lines that look like TOC entries rather than actual chapter headings
@@ -203,6 +205,26 @@ class ChapterService:
         return hits
 
     @classmethod
+    def _parse_number(cls, num_str: str) -> int:
+        num_str = num_str.upper()
+        roman_map = {'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100}
+        if all(c in roman_map for c in num_str):
+            # parse roman numeral
+            total = 0
+            prev = 0
+            for char in reversed(num_str):
+                curr = roman_map[char]
+                if curr < prev:
+                    total -= curr
+                else:
+                    total += curr
+                prev = curr
+            return total
+        elif num_str.isdigit():
+            return int(num_str)
+        return 0
+
+    @classmethod
     def _match_chapter_line(
         cls, line: str, page_number: int
     ) -> _RawChapterHit | None:
@@ -216,14 +238,14 @@ class ChapterService:
                     return _RawChapterHit(
                         title=cls._clean_title(title),
                         page_number=page_number,
-                        detected_number=int(num_str),
+                        detected_number=cls._parse_number(num_str),
                     )
                 elif len(groups) == 1:
                     num_str = groups[0]
                     return _RawChapterHit(
                         title=f"Chapter {num_str}",
                         page_number=page_number,
-                        detected_number=int(num_str),
+                        detected_number=cls._parse_number(num_str),
                     )
         return None
 

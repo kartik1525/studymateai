@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { checkHealth } from '../../services/api';
-import { Activity } from 'lucide-react';
+import { useStudyContext } from '../../context/StudyContext';
 
 export default function Topbar() {
+  const { activeDocument } = useStudyContext();
   const [backendStatus, setBackendStatus] = useState({
     checking: true,
     healthy: false,
@@ -37,38 +38,33 @@ export default function Topbar() {
   }, []);
 
   return (
-    <header className="h-14 border-b border-[#E5E3DC] bg-[#FFFFFF] px-6 flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <h1 className="font-editorial text-lg text-[#20201E]">
+    <header className="h-24 bg-transparent px-8 md:px-12 flex items-center justify-between relative z-20">
+      <div className="flex items-center gap-6">
+        <div className="text-[10px] font-bold tracking-[0.2em] text-[var(--color-ink)] uppercase">
           Study Desk
-        </h1>
-        <span className="text-[#E5E3DC]">|</span>
-        <span className="text-xs text-[#73736D]">
-          Class 10 · AI Textbook
-        </span>
+        </div>
+        {activeDocument && (
+          <>
+            <span className="text-[var(--color-border)] text-lg leading-none">/</span>
+            <span className="text-[10px] font-bold tracking-[0.1em] text-[var(--color-muted)] uppercase">
+              Class {activeDocument.class_name} · {activeDocument.subject}
+            </span>
+          </>
+        )}
       </div>
 
-      <div className="flex items-center gap-4">
-        {/* Backend Connectivity Status Indicator */}
-        <div className="flex items-center gap-2 text-xs font-mono px-2.5 py-1 bg-[#F7F6F2] border border-[#E5E3DC] rounded text-[#73736D]">
-          <Activity
-            className={`w-3.5 h-3.5 ${
-              backendStatus.checking
-                ? 'text-amber-500 animate-pulse'
-                : backendStatus.healthy
-                ? 'text-emerald-600'
-                : 'text-red-500'
-            }`}
-          />
-          <span>
-            API:{' '}
-            {backendStatus.checking
-              ? 'Connecting...'
+      <div className="flex items-center">
+        {/* Tiny Backend Connectivity Status Indicator */}
+        <div 
+          className={`w-2 h-2 rounded-full shadow-sm ${
+            backendStatus.checking
+              ? 'bg-amber-400 animate-pulse'
               : backendStatus.healthy
-              ? `Online (v${backendStatus.version || '1.0.0'})`
-              : 'Disconnected'}
-          </span>
-        </div>
+              ? 'bg-emerald-400'
+              : 'bg-red-500'
+          }`}
+          title={`API: ${backendStatus.healthy ? 'Online' : 'Offline'}`}
+        />
       </div>
     </header>
   );

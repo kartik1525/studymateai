@@ -2,14 +2,14 @@
 RAG Service.
 
 Orchestrates retrieval of relevant chunks and generation of grounded answers.
-Handles insufficient context detection and deduplication of source references.
+Sources are used internally for grounding but are NOT exposed to the student.
 """
 
 from __future__ import annotations
 
 import logging
 
-from app.models.chat import TutorAskResponse, SourceReference
+from app.models.chat import TutorAskResponse
 from app.models.document import DocumentMeta
 from app.services.retrieval_service import RetrievalService
 from app.services.llm_service import LLMService
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class RAGService:
     """Service to orchestrate the Retrieval-Augmented Generation flow."""
 
-    INSUFFICIENT_CONTEXT_MESSAGE = "I couldn't find enough information about this in the selected material."
+    INSUFFICIENT_CONTEXT_MESSAGE = "I don't have enough information in the selected material to explain this accurately."
 
     @classmethod
     def ask_tutor(
@@ -39,7 +39,7 @@ class RAGService:
             question: The student's question.
             
         Returns:
-            TutorAskResponse containing the answer and source references.
+            TutorAskResponse containing the conceptual answer (no sources exposed).
         """
         # Step 1: Retrieve relevant chunks
         logger.info(f"Retrieving chunks for doc '{document_meta.document_id}', chapters {chapters}")
@@ -54,14 +54,14 @@ class RAGService:
             logger.info("No relevant chunks retrieved. Returning fallback message.")
             return TutorAskResponse(
                 answer=cls.INSUFFICIENT_CONTEXT_MESSAGE,
-                sources=[]
             )
 
         # Step 3: Build the grounded context string
+        # Internal metadata is included for the LLM to ground its answer,
+        # but the prompt instructs the LLM to NOT expose this to the student.
         context_parts = []
         for i, chunk in enumerate(retrieved_chunks):
-            # Include chapter and page information explicitly for the LLM
-            part = f"[Source {i+1} | Chapter: {chunk.chapter_title} | Page: {chunk.page}]\n{chunk.text}\n"
+            part = f"[Context {i+1}]\n{chunk.text}\n"
             context_parts.append(part)
         
         context_text = "\n".join(context_parts)
@@ -91,31 +91,16 @@ class RAGService:
             
             # Additional safety check on the LLM's output
             if cls.INSUFFICIENT_CONTEXT_MESSAGE.strip().lower() in answer_text.strip().lower():
-                # If the LLM returns the exact fallback message, clear the sources
                 return TutorAskResponse(
                     answer=cls.INSUFFICIENT_CONTEXT_MESSAGE,
-                    sources=[]
                 )
 
         except Exception as e:
             logger.error(f"Failed to generate answer: {e}")
             raise
 
-        # Step 6: Construct unique source references
-        # Ensure we only include sources that were actually retrieved
-        unique_sources: dict[str, SourceReference] = {}
-        for chunk in retrieved_chunks:
-            source_key = f"{chunk.document_name}-{chunk.chapter_title}-{chunk.page}"
-            if source_key not in unique_sources:
-                unique_sources[source_key] = SourceReference(
-                    document=chunk.document_name,
-                    chapter=chunk.chapter_title,
-                    page=chunk.page
-                )
-                
-        sources_list = list(unique_sources.values())
-
+        # Sources are intentionally NOT included in the response.
+        # The student sees only the conceptual explanation.
         return TutorAskResponse(
             answer=answer_text.strip(),
-            sources=sources_list,
         )
